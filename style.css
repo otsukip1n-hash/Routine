@@ -50,3 +50,11 @@ label.chk input{width:22px;height:22px;accent-color:var(--acc)}
 .set .row input{width:130px;margin:0}
 .set p{font-size:13px;color:var(--sub);margin:6px 0}
 .set .acts{display:flex;gap:8px;flex-wrap:wrap}
+
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body,header{transition:background-color .3s}
+.logo rect{fill:var(--acc)}
+.task{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.task.lift{position:relative;z-index:3;opacity:.97;box-shadow:0 8px 22px #0000003a;transition:none}
+body.dragging{cursor:grabbing}

@@ -4,6 +4,11 @@ const KEY='slottasks:v1:data';           // 他アプリと衝突しないよう
 const COL={morning:'#ffe0a3',am:'#c6ecd2',pm:'#bde0f6',eve:'#ffc8d6',night:'#c9c4f2'};
 const DEF=[['morning','朝','05:00'],['am','午前','09:00'],['pm','午後','12:00'],['eve','夕','17:00'],['night','夜','20:00']];
 const defSlots=()=>DEF.map(([id,name,start])=>({id,name,start}));
+// スロット別テーマ [ヘッダー, 背景, 薄い背景, アクセント]
+const TH={base:['#b9a6e6','#f1ecfa','#e6ddf6','#7a56c2'],morning:['#ffd98f','#fff7e6','#ffeabd','#a9680f'],am:['#aee0bf','#eef9f1','#d6f0de','#2f8a55'],pm:['#a9d4f2','#edf6fd','#d3e9f8','#2f78b0'],eve:['#ffb8cb','#fff0f4','#ffdce6','#c2476b'],night:['#b4aee9','#efeefb','#dedcf5','#5a52b5']};
+function theme(k){const t=TH[k]||TH.base,r=document.documentElement.style;
+  ['--pri','--bg','--bg2','--acc'].forEach((v,i)=>r.setProperty(v,t[i]));
+  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t[0]}
 const $=id=>document.getElementById(id);
 const h=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
 const pad=n=>String(n).padStart(2,'0');
@@ -41,7 +46,9 @@ function card(t){
   const b=h('div','body');b.append(h('div','nm',t.name));
   if(t.memo)b.append(h('div','mm',t.memo));
   if(t.type==='period')b.append(h('span','badge',`${md(t.start)}〜${md(t.end)}${active(t)?'':'（期間外）'}`));
-  d.append(lb,b);d.onclick=()=>openModal(t);return d}
+  d.append(lb,b);d.dataset.id=t.id;d.dataset.slot=t.slot;d.oncontextmenu=e=>e.preventDefault();
+  d.onclick=()=>{if(Date.now()<noClick)return;openModal(t)};
+  d.addEventListener('pointerdown',e=>dragStart(e,d));return d}
 
 function list(tasks,box){
   if(!tasks.length)box.append(h('div','empty','表示するタスクがありません。\n右下の＋から追加できます。'));
@@ -49,6 +56,7 @@ function list(tasks,box){
 
 function render(){
   const m=$('main');m.replaceChildren();$('sub').textContent='';
+  theme(view==='all'||view==='settings'?'base':view==='now'?NOW:view);
   if(view==='settings'){$('title').textContent='設定';return renderSettings(m)}
   if(view==='all'){
     $('title').textContent='すべてのタスク';
@@ -130,6 +138,44 @@ $('fSave').onclick=()=>{
   if(editing)Object.assign(editing,data);else S.tasks.push({id:uid(),done:false,...data});
   save();closeModal();render()};
 $('fDel').onclick=()=>{if(editing&&confirm('このタスクを削除しますか？')){S.tasks=S.tasks.filter(t=>t!==editing);save();closeModal();render()}};
+
+// ---- 長押しで並べ替え（同じスロット内） ----
+let noClick=0,drag=null;
+document.addEventListener('touchmove',e=>{if(drag)e.preventDefault()},{passive:false});
+function dragStart(e,el){
+  if(e.target.closest('.cb'))return;
+  let lx=e.clientX,ly=e.clientY;
+  const mv=ev=>{if(Math.hypot(ev.clientX-e.clientX,ev.clientY-e.clientY)>10)stop();lx=ev.clientX;ly=ev.clientY};
+  const stop=()=>{clearTimeout(tid);removeEventListener('pointermove',mv);removeEventListener('pointerup',stop);removeEventListener('pointercancel',stop)};
+  addEventListener('pointermove',mv);addEventListener('pointerup',stop);addEventListener('pointercancel',stop);
+  const tid=setTimeout(()=>{stop();begin(el,ly)},450)}
+function begin(el,y){
+  if(navigator.vibrate)navigator.vibrate(15);
+  drag={el,grab:y-el.getBoundingClientRect().top,y,slot:el.dataset.slot};
+  el.classList.add('lift');document.body.classList.add('dragging');
+  addEventListener('pointermove',dmove);addEventListener('pointerup',dend);addEventListener('pointercancel',dend);tick()}
+const dmove=e=>{if(drag)drag.y=e.clientY};
+function place(){
+  const {el,grab,y}=drag;el.style.transform='';
+  const c=y-grab+el.getBoundingClientRect().height/2;
+  const same=n=>n&&n.classList&&n.classList.contains('task')&&n.dataset.slot===drag.slot;
+  let p,n;
+  while(same(p=el.previousElementSibling)){const q=p.getBoundingClientRect();if(c<q.top+q.height/2)el.parentNode.insertBefore(el,p);else break}
+  while(same(n=el.nextElementSibling)){const q=n.getBoundingClientRect();if(c>q.top+q.height/2)el.parentNode.insertBefore(n,el);else break}
+  el.style.transform=`translateY(${y-grab-el.getBoundingClientRect().top}px) scale(1.02)`}
+function tick(){
+  if(!drag)return;const y=drag.y;
+  if(y<110)scrollBy(0,-10);else if(y>innerHeight-110)scrollBy(0,10);
+  place();drag.raf=requestAnimationFrame(tick)}
+function dend(){
+  if(!drag)return;const {el,slot,raf}=drag;cancelAnimationFrame(raf);drag=null;
+  removeEventListener('pointermove',dmove);removeEventListener('pointerup',dend);removeEventListener('pointercancel',dend);
+  document.body.classList.remove('dragging');noClick=Date.now()+400;
+  const ids=[...el.parentNode.querySelectorAll(`.task[data-slot="${slot}"]`)].map(n=>n.dataset.id);
+  const set=new Set(ids),idx=[],by={};
+  S.tasks.forEach((t,i)=>{by[t.id]=t;if(set.has(t.id))idx.push(i)});
+  idx.forEach((i,k)=>{S.tasks[i]=by[ids[k]]});
+  save();render()}
 
 render();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
