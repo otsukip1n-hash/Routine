@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b9a6e6">
+<title>スロットタスク</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header>
+  <button id="menuBtn" aria-label="メニュー">☰</button>
+  <div class="ttl"><svg class="logo" viewBox="0 0 32 24" aria-hidden="true"><rect width="32" height="24" rx="7" fill="#7a56c2"/><path d="M13 7l9 5-9 5z" fill="#fff"/></svg><span id="title"></span></div>
+  <span id="sub"></span>
+</header>
+<main id="main"></main>
+<button id="fab" aria-label="タスクを追加">＋</button>
+
+<div id="overlay"></div>
+<nav id="drawer"></nav>
+
+<div id="modal" class="hidden">
+  <div class="sheet">
+    <h2 id="mTitle">タスクを追加</h2>
+    <label>タスク名<input id="fName" maxlength="80"></label>
+    <label>メモ<textarea id="fMemo" rows="3"></textarea></label>
+    <label>スロット<select id="fSlot"></select></label>
+    <label class="chk"><input type="checkbox" id="fPeriod"> 期間限定タスク</label>
+    <div id="periodBox" class="hidden">
+      <label>開始日<input type="date" id="fStart"></label>
+      <label>終了日<input type="date" id="fEnd"></label>
+    </div>
+    <div class="btns">
+      <button id="fDel" class="danger hidden">削除</button>
+      <span class="sp"></span>
+      <button id="fCancel">キャンセル</button>
+      <button id="fSave" class="primary">保存</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="fileIn" accept=".csv,text/csv" hidden>
+<script src="./app.js"></script>
+</body>
+</html>
